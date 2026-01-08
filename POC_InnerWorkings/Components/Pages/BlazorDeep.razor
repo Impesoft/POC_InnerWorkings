@@ -1,0 +1,24 @@
+﻿@page "/blazor-deep"
+@rendermode InteractiveServer
+
+<PageTitle>Blazor Deep Reflection</PageTitle>
+
+<h3>🔬 Blazor Server: Deep Reflection into Internal Renderer</h3>
+
+<div style="margin: 20px 0; background: #ffebee; padding: 15px; border-left: 4px solid #f44336;">
+    <strong>⚠️ WARNING:</strong> This page uses reflection to access Blazor's internal APIs.
+    These are NOT public APIs and may change between versions. This is for educational/proof purposes only.
+</div>
+
+<div style="margin: 20px 0;">
+    <button @onclick="InspectButton" style="padding: 10px 20px; font-size: 16px; background: #4CAF50; color: white;">
+        🔍 Inspect Renderer Event Handler Storage (Robust)
+    </button>
+</div>
+
+<hr />
+
+<div style="margin: 20px 0;">
+    <h4>🔎 Renderer Internals (via Reflection):</h4>
+    <pre style="background: #1e1e1e; color: #d4d4d4; padding: 20px; overflow-x: auto;">@rendererInfo</pre>
+</div>
