@@ -1,0 +1,32 @@
+.content {
+    width: 100%;
+    max-width: 80vw;
+}
+.console {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 20px;
+    overflow: auto;
+    font-family: "Courier New", Consolas, monospace;
+    white-space: pre-wrap;
+    text-indent: hanging;
+    font-size: 13px;
+    line-height: 1;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+    border-radius: 4px;
+}
+
+/* Make the boxed header look consistent */
+    .console .box-header {
+        display: inline-block;
+        padding: 6px 10px;
+        margin-bottom: 8px;
+        text-indent: hanging;
+    }
+
+    .console .code-note {
+        color: #9cdcfe;
+        font-size: 12px;
+        text-indent: hanging;
+    }

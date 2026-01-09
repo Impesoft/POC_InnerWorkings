@@ -13,9 +13,16 @@ public partial class BlazorDeep
     {
         var sb = new StringBuilder();
 
-        sb.AppendLine("╔══════════════════════════════════════════════════════════════════════");
-        sb.AppendLine("║ RENDERER INTERNAL INSPECTION (ROBUST)");
-        sb.AppendLine("╚══════════════════════════════════════════════════════════════════════");
+        // prettier enclosed header with visible borders
+        var title = "RENDERER INTERNAL INSPECTION (ROBUST)";
+        var minWidth = 20;
+        var contentWidth = Math.Max(title.Length, minWidth);
+        var pad = 2;
+        var innerWidth = contentWidth + pad * 2;
+
+        sb.AppendLine("╔" + new string('═', innerWidth) + "╗");
+        sb.AppendLine("║" + new string(' ', pad) + title.PadRight(contentWidth) + new string(' ', pad) + "║");
+        sb.AppendLine("╚" + new string('═', innerWidth) + "╝");
         sb.AppendLine();
 
         try
@@ -23,6 +30,7 @@ public partial class BlazorDeep
             var renderHandle = GetPrivateFieldValue(ComponentBaseType(), this, "_renderHandle");
             sb.AppendLine($"✅ RenderHandle Retrieved: {renderHandle?.GetType().Name ?? "null"}");
             sb.AppendLine($"   Instance: {renderHandle?.GetHashCode()}");
+            sb.AppendLine($"   Retrieved using: GetPrivateFieldValue(type: {ComponentBaseType().FullName}, instance: this, fieldName: \"_renderHandle\")");
             sb.AppendLine();
 
             if (renderHandle is null)
@@ -35,6 +43,7 @@ public partial class BlazorDeep
             var renderer = GetPrivateFieldValue(renderHandle.GetType(), renderHandle, "_renderer");
             sb.AppendLine($"✅ Renderer Retrieved: {renderer?.GetType().FullName ?? "null"}");
             sb.AppendLine($"   Instance: {renderer?.GetHashCode()}");
+            sb.AppendLine($"   Retrieved using: GetPrivateFieldValue(type: {renderHandle.GetType().FullName}, instance: renderHandle, fieldName: \"_renderer\")");
             sb.AppendLine();
 
             if (renderer is null)
@@ -45,10 +54,11 @@ public partial class BlazorDeep
             }
 
             var componentId = GetPrivateFieldValue(renderHandle.GetType(), renderHandle, "_componentId");
-            sb.AppendLine($"📋 THIS COMPONENT:");
+            sb.AppendLine("📋 THIS COMPONENT:");
             sb.AppendLine($"   • Component ID: {componentId ?? "(unknown)"}");
             sb.AppendLine($"   • Component Type: {GetType().FullName}");
             sb.AppendLine($"   • Instance Hash: {GetHashCode()}");
+            sb.AppendLine($"   • componentId retrieved using: GetPrivateFieldValue(type: {renderHandle.GetType().FullName}, instance: renderHandle, fieldName: \"_componentId\")");
             sb.AppendLine();
 
             sb.AppendLine("🔎 Searching for event handler storage (ulong-keyed dictionary-like) ...");
@@ -78,6 +88,7 @@ public partial class BlazorDeep
             // 2) Heuristic scan: find ANY private field that looks like a ulong-keyed dictionary/registry
             sb.AppendLine();
             sb.AppendLine("🔬 Heuristic scan of all private instance fields for ulong-keyed dictionaries...");
+            sb.AppendLine($"   Fields enumerated using: GetAllInstanceFields(type: {renderer.GetType().FullName})");
             sb.AppendLine();
 
             var rendererType = renderer.GetType();
@@ -110,6 +121,7 @@ public partial class BlazorDeep
                         {
                             sb.AppendLine($"🧭 Found event-ish container: {f.Name} : {value.GetType().FullName}");
                             sb.AppendLine($"   Instance: {value.GetHashCode()}");
+                            sb.AppendLine($"   Container fields inspected using: GetAllInstanceFields(type: {value.GetType().FullName})");
 
                             foreach (var n in nested)
                             {
@@ -134,6 +146,7 @@ public partial class BlazorDeep
                     sb.AppendLine($"🎯 Field: {field.Name}");
                     sb.AppendLine($"   DeclaringType: {field.DeclaringType?.FullName}");
                     sb.AppendLine($"   RuntimeType:   {value!.GetType().FullName}");
+                    sb.AppendLine($"   Value retrieved using: FieldInfo.GetValue(instance: renderer) on field: {field.Name}");
                     DumpDictionarySummary(sb, value);
                     sb.AppendLine();
                 }
@@ -149,12 +162,13 @@ public partial class BlazorDeep
                 var count = TryGetCount(componentStateById);
                 if (count is not null)
                     sb.AppendLine($"   • Active Components in This Circuit: {count}");
+                sb.AppendLine($"   • Retrieved using: TryGetField(obj: renderer, fieldName: \"_componentStateById\")");
                 sb.AppendLine();
             }
 
-            sb.AppendLine("═══════════════════════════════════════════════════════════════════════");
-            sb.AppendLine("CONCLUSION:");
-            sb.AppendLine("═══════════════════════════════════════════════════════════════════════");
+            sb.AppendLine("╭" + new string('─', innerWidth) + "╮");
+            sb.AppendLine("│" + new string(' ', pad) + "CONCLUSION:".PadRight(contentWidth) + new string(' ', pad) + "│");
+            sb.AppendLine("╰" + new string('─', innerWidth) + "╯");
             sb.AppendLine();
 
             sb.AppendLine("✅ Renderer exists as a .NET object in server memory");
@@ -186,6 +200,9 @@ public partial class BlazorDeep
     private static object? GetPrivateFieldValue(Type type, object instance, string fieldName)
     {
         var f = GetAllInstanceFields(type).FirstOrDefault(x => x.Name == fieldName);
+        // Document which FieldInfo was used
+        var methodInfo = $"// Reflection used:\n// Type: {type.FullName}\n// Field: {f?.Name ?? "(not found)"}\n// Field DeclaringType: {f?.DeclaringType?.FullName ?? "(n/a)"}\n// Field BindingFlags: Instance | NonPublic | Public | DeclaredOnly";
+        // Return a tuple in a wrapper? We only return the value; callers print the methodInfo separately where appropriate.
         return f?.GetValue(instance);
     }
 
@@ -205,6 +222,8 @@ public partial class BlazorDeep
     private static object? TryGetField(object obj, string fieldName)
     {
         var f = GetAllInstanceFields(obj.GetType()).FirstOrDefault(x => x.Name == fieldName);
+        // Document how this was obtained
+        // string note = $"// Obtained by enumerating GetAllInstanceFields(type: {obj.GetType().FullName}) and selecting field.Name == \"{fieldName}\"";
         return f?.GetValue(obj);
     }
 
@@ -224,10 +243,14 @@ public partial class BlazorDeep
             return false;
 
         sb.AppendLine($"✅ Found field: {fieldName}");
-        sb.AppendLine($"   RuntimeType: {v.GetType().FullName}");
+        sb.AppendLine($"RuntimeType:");
+        sb.AppendLine($"{v.GetType().FullName}");
         var count = TryGetCount(v);
         if (count is not null)
-            sb.AppendLine($"   Count: {count}");
+            sb.AppendLine($"Count: {count}");
+
+        // Provide a small note about how the value was retrieved
+        sb.AppendLine($"Retrieved using: TryGetField(obj: renderer, fieldName: \"{fieldName}\") which enumerates GetAllInstanceFields(renderer.GetType()) and calls FieldInfo.GetValue(renderer).");
 
         if (LooksLikeUlongKeyedDictionary(v.GetType()))
         {
@@ -291,6 +314,7 @@ public partial class BlazorDeep
                     var val = valProp?.GetValue(item);
 
                     sb.AppendLine($"   • [{i}] Key={key} ValueType={val?.GetType().FullName ?? "null"}");
+                    sb.AppendLine($"      Retrieved using: enumerator over dict-like and reading Key/Value properties via reflection.");
                     i++;
                     if (i >= 5) break;
                 }
